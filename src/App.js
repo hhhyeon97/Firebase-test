@@ -1,9 +1,11 @@
-import './App.css';
+import React from 'react';
+import AddPostForm from './AddPostForm';
 
 function App() {
   return (
     <div>
-      <h1>test!</h1>
+      <h1>게시판 앱</h1>
+      <AddPostForm />
     </div>
   );
 }
