@@ -1,7 +1,7 @@
-// AddPostForm.js 파일 내용
 import React, { useState } from 'react';
 import { storage, db } from './firebase';
 import { addDoc, collection, Timestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 function AddPostForm() {
   const [title, setTitle] = useState('');
@@ -17,25 +17,36 @@ function AddPostForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // 이미지를 Firebase Storage에 업로드
-    const storageRef = storage.ref();
-    const imageRef = storageRef.child(image.name);
-    await imageRef.put(image);
+    if (!title || !content || !image) {
+      alert('제목, 내용, 이미지를 모두 입력해주세요.');
+      return;
+    }
 
-    // 이미지 URL을 가져옴
-    const imageUrl = await imageRef.getDownloadURL();
+    try {
+      // 이미지를 Firebase Storage에 업로드
+      const storageRef = ref(storage, `images/${image.name}`);
+      await uploadBytes(storageRef, image);
 
-    // Firestore에 게시물 추가
-    await addDoc(collection(db, 'posts'), {
-      title,
-      content,
-      imageUrl,
-      createdAt: Timestamp.fromDate(new Date()),
-    });
-    // 폼 초기화
-    setTitle('');
-    setContent('');
-    setImage(null);
+      // 이미지 URL을 가져옴
+      const imageUrl = await getDownloadURL(storageRef);
+
+      // Firestore에 게시물 추가
+      await addDoc(collection(db, 'posts'), {
+        title,
+        content,
+        imageUrl,
+        createdAt: Timestamp.fromDate(new Date()),
+      });
+
+      // 폼 초기화
+      setTitle('');
+      setContent('');
+      setImage(null);
+      alert('게시물이 성공적으로 추가되었습니다.');
+    } catch (error) {
+      console.error('게시물 추가 오류:', error);
+      alert('게시물을 추가하는 중에 오류가 발생했습니다.');
+    }
   };
 
   return (
@@ -45,13 +56,15 @@ function AddPostForm() {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="제목"
+        required
       />
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="내용"
+        required
       />
-      <input type="file" onChange={handleImageChange} />
+      <input type="file" onChange={handleImageChange} required />
       <button type="submit">게시물 추가</button>
     </form>
   );
